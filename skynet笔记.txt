@@ -1,0 +1,162 @@
+1. 
+struct handle_storage {
+	struct rwlock lock;               // 读写锁
+	uint32_t harbor;                  // 集群ID
+	uint32_t handle_index;            // 当前句柄索引
+	int slot_size;                    // 槽位数组大小
+	struct skynet_context ** slot;    //skynet_context数组
+	
+	int name_cap;
+	int name_count;
+	struct handle_name *name;
+};
+
+
+2. 这个函数有点复杂
+   uint32_t skynet_handle_register(struct skynet_context *ctx);
+
+
+3. 代码中有个很巧妙的设计，就是s->slot_size-1，它的低位二进制永远都是1。不信你看，刚开始slot_size是4，4-1就是3，
+   扩了以后是 8，8-1就是7，然后16,32....。这样的话，和任何数字与操作，都不会丢失“有效的”低位
+
+4. 
+
+struct handle_storage {
+    struct rwlock lock;
+    uint32_t harbor;
+    uint32_t handle_index;
+    int slot_size;
+    struct skynet_context ** slot;
+    int name_cap;
+    int name_count;
+    struct handle_name *name;
+};
+
+slot缓存
+      slot成员指向一个保存服务上下文指针的缓存。实际上是一个数组，代码实现了数组大小不足的时候的自动扩容（X2）。
+      slot_size 保存了slot缓存的当前大小。
+      handle_index保存了slot数组的使用大小，slot中的每个服务按照他们install的顺序存放，如果有服务退出，后面的所有服务上下文自动前移。
+      harbor 保持次进程的harbor ID。
+name缓存
+      name 指向一个服务名字–ID 组合的数组缓存。 同样具备自动扩容功能（X2）。按照name排序（利用strcmp作为排序函数）。
+      name_cap 记录缓存大小
+      name_count 记录当前缓存使用大小
+
+5 云风的skynet，定义为一个游戏服务器框架，用c + lua基于Actor模型实现。代码极其精简，c部分的代码只有三千行左右。
+       整个skynet框架要解决的核心问题是：把一个消息（数据包）从一个服务（Actor）发送给另一个服务（Actor），并接收其返回。
+       也就是在同一进程内（作者也强调并非只限于同一进程，因为可能会有集群间的通讯）的一个服务通过类似rpc之类的调用同一进程内的另外一个服务，
+       并接收处理结果。而skynet就是处理这些服务间发送数据包的规则和正确性。
+       skynet的核心层全部是c来实现。
+       当系统启动的时候，会得到一个提前分配好的节点id，我们称之为harbor id，这个id是集群用的，一个集群内可以启动很多个skynet节点，
+       每个节点都会分配到唯一的id。
+       一个节点（即一个进程）内有很多个服务，服务可以狭义地暂且理解为功能模块。
+       当初始化一个服务的时候，会生成一个skynet_context来作为服务的实例；一个唯一(即使是在集群里也是唯一)的服务handle，即服务的唯一id，
+       用来识别服务；一个消息队列message_queue;还要向框架注册一个callback，当服务收到有发送来的消息时，通过这个方法传入。
+
+
+6  struct skynet_monitor {
+	int version;
+	int check_version;
+	uint32_t source;
+	uint32_t destination;
+};
+
+
+7  struct monitor {
+	int count;
+	struct skynet_monitor ** m;
+	pthread_cond_t cond;
+	pthread_mutex_t mutex;
+	int sleep;
+	int quit;
+};
+
+struct skynet_monitor {
+	int version;
+	int check_version;
+	uint32_t source;
+	uint32_t destination;
+};
+
+
+struct message_queue {
+	struct spinlock lock;
+	uint32_t handle;
+	int cap;
+	int head;
+	int tail;
+	int release;
+	int in_global;
+	int overload;
+	int overload_threshold;
+	struct skynet_message *queue;
+	struct message_queue *next;
+};
+
+struct global_queue {
+	struct message_queue *head;
+	struct message_queue *tail;
+	struct spinlock lock;
+};
+
+
+8. 
+ struct timer_event {
+	uint32_t handle;
+	int session;
+};
+
+struct timer_node {
+	struct timer_node *next;
+	uint32_t expire;
+};
+
+struct link_list {
+	struct timer_node head;
+	struct timer_node *tail;
+};
+
+struct timer {
+	struct link_list near[TIME_NEAR];    //  TIME_NEAR  = 256
+	struct link_list t[4][TIME_LEVEL];   //  TIME_LEVEL = 64
+	struct spinlock lock;
+	uint32_t time;
+	uint32_t starttime;
+	uint64_t current;
+	uint64_t current_point;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,23 @@
+1. struct monitor {
+	int count;
+	struct skynet_monitor ** m;
+	pthread_cond_t cond;
+	pthread_mutex_t mutex;
+	int sleep;
+	int quit;
+};
+
+2. struct worker_parm {
+	struct monitor *m;
+	int id;
+	int weight;
+};
+
+3. struct skynet_monitor {
+	int version;
+	int check_version;
+	uint32_t source;
+	uint32_t destination;
+};
+
+4. 
