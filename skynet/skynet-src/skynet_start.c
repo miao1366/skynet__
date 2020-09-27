@@ -53,8 +53,8 @@ create_thread(pthread_t *thread, void *(*start_routine) (void *), void *arg) {
 }
 
 static void
-wakeup(struct monitor *m, int busy) {
-	if (m->sleep >= m->count - busy) {
+wakeup(struct monitor *m, int busy) {        //busy  7
+	if (m->sleep >= m->count - busy) {       //m->count  8
 		// signal sleep worker, "spurious wakeup" is harmless
 		pthread_cond_signal(&m->cond);
 	}
@@ -133,7 +133,7 @@ thread_timer(void *p) {
 		skynet_updatetime();
 		skynet_socket_updatetime();
 		CHECK_ABORT
-		wakeup(m,m->count-1);
+		wakeup(m,m->count-1);    //8
 		usleep(2500);
 		if (SIG) {
 			signal_hup();

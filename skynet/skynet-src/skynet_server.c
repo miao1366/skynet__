@@ -825,7 +825,7 @@ skynet_globalexit(void) {
 
 void
 skynet_initthread(int m) {
-	uintptr_t v = (uint32_t)(-m);    //4     4294967292:    3    4294967292
+	uintptr_t v = (uint32_t)(-m);    //4     4294967292:    3    4294967293    2   4294967294
 	pthread_setspecific(G_NODE.handle_key, (void *)v);
 }
 

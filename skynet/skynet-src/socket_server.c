@@ -1505,7 +1505,7 @@ clear_closed_event(struct socket_server *ss, struct socket_message * result, int
 int 
 socket_server_poll(struct socket_server *ss, struct socket_message * result, int * more) {
 	for (;;) {
-		if (ss->checkctrl) {
+		if (ss->checkctrl) {     //第一次调用时是1
 			if (has_cmd(ss)) {
 				int type = ctrl_cmd(ss, result);
 				if (type != -1) {
