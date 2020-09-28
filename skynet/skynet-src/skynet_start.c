@@ -157,7 +157,7 @@ thread_worker(void *p) {
 	int weight = wp->weight;
 	struct monitor *m = wp->m;
 	struct skynet_monitor *sm = m->m[id];
-	skynet_initthread(THREAD_WORKER);
+	skynet_initthread(THREAD_WORKER);       //0
 	struct message_queue * q = NULL;
 	while (!m->quit) {
 		q = skynet_context_message_dispatch(sm, q, weight);

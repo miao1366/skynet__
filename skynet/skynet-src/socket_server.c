@@ -77,8 +77,8 @@ struct write_buffer {
 #define SIZEOF_UDPBUFFER (sizeof(struct write_buffer))
 
 struct wb_list {
-	struct write_buffer * head;
-	struct write_buffer * tail;
+	struct write_buffer * head;    //写缓冲区的头指针
+	struct write_buffer * tail;    //写缓冲区的头指针
 };
 
 struct socket_stat {
@@ -89,21 +89,21 @@ struct socket_stat {
 };
 
 struct socket {
-	uintptr_t opaque;
-	struct wb_list high;
-	struct wb_list low;
-	int64_t wb_size;
+	uintptr_t opaque;          //所属服务在skynet中对应的handle
+	struct wb_list high;       //高优先级写队列
+	struct wb_list low;        //低优先级写队列
+	int64_t wb_size;           //写缓冲尚未发送的数据大小
 	struct socket_stat stat;
 	volatile uint32_t sending;
 	int fd;
-	int id;
-	uint8_t protocol;
-	uint8_t type;
+	int id;                   //用于索引socket_server里的slot数组
+	uint8_t protocol;         //使用的协议类型 tcp/udp
+	uint8_t type;             //socket 的类型或状态
 	uint8_t reading;
 	int udpconnecting;
 	int64_t warn_size;
 	union {
-		int size;
+		int size;            //读缓冲预估需要的大小
 		uint8_t udp_address[UDP_ADDRESS_SIZE];
 	} p;
 	struct spinlock dw_lock;
@@ -114,19 +114,19 @@ struct socket {
 
 struct socket_server {
 	volatile uint64_t time;
-	int recvctrl_fd;
-	int sendctrl_fd;
+	int recvctrl_fd;           //pipe读端
+	int sendctrl_fd;           //pipe写端
 	int checkctrl;
-	poll_fd event_fd;
+	poll_fd event_fd;          //epoll/kqueue的fd
 	int alloc_id;
-	int event_n;
-	int event_index;
+	int event_n;               //epoll_wait  返回的事件数
+	int event_index;           //单前处理的事件序号
 	struct socket_object_interface soi;
-	struct event ev[MAX_EVENT];          //64
-	struct socket slot[MAX_SOCKET];      //65536
+	struct event ev[MAX_EVENT];          //64  epoll_wait 返回的事件集合
+	struct socket slot[MAX_SOCKET];      //65536 每个socket_server 可以包含多个socket,slot
 	char buffer[MAX_INFO];               //128
 	uint8_t udpbuffer[MAX_UDP_PACKAGE];  //65536
-	fd_set rfds;
+	fd_set rfds;                         // select监测的fd集
 };
 
 struct request_open {
@@ -1130,6 +1130,7 @@ block_readpipe(int pipefd, void *buffer, int sz) {
 	}
 }
 
+// 是否有可读文件
 static int
 has_cmd(struct socket_server *ss) {
 	struct timeval tv = {0,0};
@@ -1506,7 +1507,7 @@ int
 socket_server_poll(struct socket_server *ss, struct socket_message * result, int * more) {
 	for (;;) {
 		if (ss->checkctrl) {     //第一次调用时是1
-			if (has_cmd(ss)) {
+			if (has_cmd(ss)) {   //是否有可读文件
 				int type = ctrl_cmd(ss, result);
 				if (type != -1) {
 					clear_closed_event(ss, result, type);

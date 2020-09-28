@@ -14,6 +14,7 @@ struct handle_storage {
 
 2. 这个函数有点复杂
    uint32_t skynet_handle_register(struct skynet_context *ctx);
+   skynet_context_message_dispatch(struct skynet_monitor *sm, struct message_queue *q, int weight)
 
 
 3. 代码中有个很巧妙的设计，就是s->slot_size-1，它的低位二进制永远都是1。不信你看，刚开始slot_size是4，4-1就是3，
@@ -128,13 +129,70 @@ struct timer {
 
 
 
+struct socket_server {
+	volatile uint64_t time;
+	int recvctrl_fd;           //pipe读端
+	int sendctrl_fd;           //pipe写端
+	int checkctrl;
+	poll_fd event_fd;          //epoll/kqueue的fd
+	int alloc_id;
+	int event_n;               //epoll_wait  返回的事件数
+	int event_index;           //单前处理的事件序号
+	struct socket_object_interface soi;
+	struct event ev[MAX_EVENT];          //64  epoll_wait 返回的事件集合
+	struct socket slot[MAX_SOCKET];      //65536 每个socket_server 可以包含多个socket,slot
+	char buffer[MAX_INFO];               //128
+	uint8_t udpbuffer[MAX_UDP_PACKAGE];  //65536
+	fd_set rfds;                         // select监测的fd集
+};
 
 
 
+struct socket {
+	uintptr_t opaque;          //所属服务在skynet中对应的handle
+	struct wb_list high;       //高优先级写队列
+	struct wb_list low;        //低优先级写队列
+	int64_t wb_size;           //写缓冲尚未发送的数据大小
+	struct socket_stat stat;
+	volatile uint32_t sending;
+	int fd;
+	int id;                   //用于索引socket_server里的slot数组
+	uint8_t protocol;         //使用的协议类型 tcp/udp
+	uint8_t type;             //socket 的类型或状态
+	uint8_t reading;
+	int udpconnecting;
+	int64_t warn_size;
+	union {
+		int size;            //读缓冲预估需要的大小
+		uint8_t udp_address[UDP_ADDRESS_SIZE];
+	} p;
+	struct spinlock dw_lock;
+	int dw_offset;
+	const void * dw_buffer;
+	size_t dw_size;
+};
 
 
+struct socket_lock {
+	struct spinlock *lock;
+	int count;
+};
 
 
+struct write_buffer {
+	struct write_buffer * next;
+	const void *buffer;
+	char *ptr;
+	size_t sz;
+	bool userobject;            //共享
+	uint8_t udp_address[UDP_ADDRESS_SIZE];
+};
+
+
+struct wb_list {
+	struct write_buffer * head;    //写缓冲区的头指针
+	struct write_buffer * tail;    //写缓冲区的头指针
+};
 
 
 
