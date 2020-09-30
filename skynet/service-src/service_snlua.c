@@ -12,11 +12,11 @@
 #define MEMORY_WARNING_REPORT (1024 * 1024 * 32)
 
 struct snlua {
-	lua_State * L;
-	struct skynet_context * ctx;
-	size_t mem;
-	size_t mem_report;
-	size_t mem_limit;
+	lua_State * L;    //Lua 状态机
+	struct skynet_context * ctx;    // 关联的skynet服务
+	size_t mem;          // Lua使用的内存, 在lalloc记录
+	size_t mem_report;   // 内存预警，当达到阀值会打一条日志，然后阀值翻倍 
+	size_t mem_limit;    //内存限制
 };
 
 // LUA_CACHELIB may defined in patched lua for shared proto
@@ -149,11 +149,11 @@ snlua_init(struct snlua *l, struct skynet_context *ctx, const char * args) {
 	int sz = strlen(args);
 	char * tmp = skynet_malloc(sz);
 	memcpy(tmp, args, sz);
-	skynet_callback(ctx, l , launch_cb);
-	const char * self = skynet_command(ctx, "REG", NULL);
-	uint32_t handle_id = strtoul(self+1, NULL, 16);
+	skynet_callback(ctx, l , launch_cb);    //指定回调函数为launch_cb
+	const char * self = skynet_command(ctx, "REG", NULL);    //取本服务的句柄
+	uint32_t handle_id = strtoul(self+1, NULL, 16);    
 	// it must be first message
-	skynet_send(ctx, 0, handle_id, PTYPE_TAG_DONTCOPY,0, tmp, sz);
+	skynet_send(ctx, 0, handle_id, PTYPE_TAG_DONTCOPY,0, tmp, sz); //第一个消息在launch_cb处理，见函数
 	return 0;
 }
 

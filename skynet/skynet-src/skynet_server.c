@@ -41,16 +41,16 @@
 #endif
 
 struct skynet_context {
-	void * instance;
-	struct skynet_module * mod;
-	void * cb_ud;
-	skynet_cb cb;
-	struct message_queue *queue;
-	FILE * logfile;
+	void * instance;             //服务模块的实例指针
+	struct skynet_module * mod;  //服务模块指针
+	void * cb_ud;                //回调函数的用户数据
+	skynet_cb cb;                //服务处理消息的回调函数
+	struct message_queue *queue; //消息队列
+	FILE * logfile; 
 	uint64_t cpu_cost;	// in microsec
 	uint64_t cpu_start;	// in microsec
 	char result[32];
-	uint32_t handle;
+	uint32_t handle;             //服务句柄
 	int session_id;
 	int ref;
 	int message_count;
