@@ -54,6 +54,23 @@ name缓存
        当初始化一个服务的时候，会生成一个skynet_context来作为服务的实例；一个唯一(即使是在集群里也是唯一)的服务handle，即服务的唯一id，
        用来识别服务；一个消息队列message_queue;还要向框架注册一个callback，当服务收到有发送来的消息时，通过这个方法传入。
 
+ Skynet框架做两个必要的保证：
+      一、一个服务的 callback 函数永远不会被并发。
+      二、一个服务向另一个服务发送的消息的次序是严格保证的。
+
+
+   我用多线程模型来实现它。底层有一个线程消息队列，消息由三部分构成：源地址、目的地址、以及数据块。框架启动固定的多条线程，每条工作线程不断从消息队列取到消息。
+   根据目的地址获得服务对象。当服务正在工作（被锁住）就把消息放到服务自己的私有队列中。否则调用服务的 callback 函数。当 callback 函数运行完后，检查私有队列，
+   并处理完再解锁。线程数应该略大于系统的 CPU 核数，以防止系统饥饿。（只要服务不直接给自己不断发新的消息，就不会有服务被饿死）
+   由于我们是在同一个进程内工作的。所以我对消息传递做了一点优化。对于目前的点对点消息，要求发送者调用 malloc 分配出消息携带数据用到的内存；
+   由接受方处理完后调用 free 清理（由框架来做）。这样数据传递就不需要有额外的拷贝了。做为核心功能，Skynet 仅解决一个问题： 把一个符合规范的 C 模块，
+   从动态库（so 文件）中启动起来，绑定一个永不重复（即使模块退出）的数字 id 做为其 handle 。模块被称为服务（Service），服务间可以自由发送消息。
+   每个模块可以向 Skynet 框架注册一个 callback 函数，用来接收发给它的消息。每个服务都是被一个个消息包驱动，当没有包到来的时候，它们就会处于挂起状态，
+   对 CPU 资源零消耗。如果需要自主逻辑，则可以利用 Skynet 系统提供的 timeout 消息，定期触发
+
+
+
+
 
 6  struct skynet_monitor {
 	int version;
@@ -196,6 +213,19 @@ struct wb_list {
 
 
 
+struct skynet_module {
+	const char * name;
+	void * module;
+	skynet_dl_create create;
+	skynet_dl_init init;
+	skynet_dl_release release;
+	skynet_dl_signal signal;
+};
+
+
+12 struct skynet_module  struct modules 模块结构体 skynet_module.c skynet_module.h
+
+13 struct skynet_context    skynet_server.c   skynet_server.h
 
 
 

@@ -12,22 +12,23 @@
 #define MAX_SLOT_SIZE 0x40000000
 
 struct handle_name {
-	char * name;
-	uint32_t handle;
+	char * name;        // 服务别名
+	uint32_t handle;    // 服务id
 };
 
+// 这个结构用于记录，服务对应的别名，当应用层为某个服务命名时，会写到这里来
 struct handle_storage {
-	struct rwlock lock;
+	struct rwlock lock;       // 读写锁
 
 	uint32_t harbor;          //次进程的harbor ID
-	uint32_t handle_index;    //slot数组的使用大小，slot中的每个服务按照他们install的顺序存放，
+	uint32_t handle_index;    //创建下一个服务时，该服务的slot idx，一般会先判断该slot是否被占用，后面会详细讨论
                               //如果有服务退出，后面的所有服务上下文自动前移
-	int slot_size;            //slot缓存的当前大小
-	struct skynet_context ** slot;
+	int slot_size;            //slot的大小，一定是2^n，初始值是4
+	struct skynet_context ** slot;    //skynet_context list
 	
-	int name_cap;      //name_cap 记录缓存大小
-	int name_count;    //当前缓存使用大小
-	struct handle_name *name;
+	int name_cap;               // 别名列表大小，大小为2^n
+	int name_count;             // 别名数量
+	struct handle_name *name;   // 别名列表
 };
 
 static struct handle_storage *H = NULL;
