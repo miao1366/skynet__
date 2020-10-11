@@ -146,12 +146,12 @@ launch_cb(struct skynet_context * context, void *ud, int type, int session, uint
 
 int
 snlua_init(struct snlua *l, struct skynet_context *ctx, const char * args) {
-	int sz = strlen(args);
+	int sz = strlen(args);   //"bootstrap"
 	char * tmp = skynet_malloc(sz);
 	memcpy(tmp, args, sz);
 	skynet_callback(ctx, l , launch_cb);    //指定回调函数为launch_cb
 	const char * self = skynet_command(ctx, "REG", NULL);    //取本服务的句柄
-	uint32_t handle_id = strtoul(self+1, NULL, 16);    
+	uint32_t handle_id = strtoul(self+1, NULL, 16);    //1
 	// it must be first message
 	skynet_send(ctx, 0, handle_id, PTYPE_TAG_DONTCOPY,0, tmp, sz); //第一个消息在launch_cb处理，见函数
 	return 0;
