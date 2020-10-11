@@ -32,6 +32,7 @@
 #define SOCKET_TYPE_PACCEPT 7
 #define SOCKET_TYPE_BIND 8
 
+//    65536
 #define MAX_SOCKET (1<<MAX_SOCKET_P)
 
 #define PRIORITY_HIGH 0
@@ -89,16 +90,16 @@ struct socket_stat {
 };
 
 struct socket {
-	uintptr_t opaque;          //所属服务在skynet中对应的handle
-	struct wb_list high;       //高优先级写队列
-	struct wb_list low;        //低优先级写队列
-	int64_t wb_size;           //写缓冲尚未发送的数据大小
+	uintptr_t opaque;          // 与本socket关联的服务地址，socket接收到的消息，最后将会传送到这个服务商
+	struct wb_list high;       // 高优先级发送队列
+	struct wb_list low;        // 低优先级发送队列
+	int64_t wb_size;           //写缓冲尚未发送的数据大小 、发送字节大小
 	struct socket_stat stat;
 	volatile uint32_t sending;
-	int fd;
-	int id;                   //用于索引socket_server里的slot数组
-	uint8_t protocol;         //使用的协议类型 tcp/udp
-	uint8_t type;             //socket 的类型或状态
+	int fd;                    // socket文件描述符
+	int id;                    //用于索引socket_server里的slot数组
+	uint8_t protocol;          //使用的协议类型 tcp/udp
+	uint8_t type;              //socket 的类型或状态  epoll事件触发时，会根据type来选择处理事件的逻辑
 	uint8_t reading;
 	int udpconnecting;
 	int64_t warn_size;
@@ -114,17 +115,17 @@ struct socket {
 
 struct socket_server {
 	volatile uint64_t time;
-	int recvctrl_fd;           //pipe读端
-	int sendctrl_fd;           //pipe写端
-	int checkctrl;
-	poll_fd event_fd;          //epoll/kqueue的fd
-	int alloc_id;
-	int event_n;               //epoll_wait  返回的事件数
-	int event_index;           //单前处理的事件序号
+	int recvctrl_fd;           // pipe读端  接收管道消息的文件描述
+	int sendctrl_fd;           // pipe写端  发送管道消息的文件描述
+	int checkctrl;             // 判断是否有其他线程通过管道，向socket线程发送消息的标记变量
+	poll_fd event_fd;          // epoll / kqueue的实例fd
+	int alloc_id;              // 已经分配的socket slot列表id
+	int event_n;               // epoll_wait返回的事件数    标记本次epoll事件的数量
+	int event_index;           // 下一个未处理的epoll事件索引
 	struct socket_object_interface soi;
-	struct event ev[MAX_EVENT];          //64  epoll_wait 返回的事件集合
-	struct socket slot[MAX_SOCKET];      //65536 每个socket_server 可以包含多个socket,slot
-	char buffer[MAX_INFO];               //128
+	struct event ev[MAX_EVENT];          //64  epoll事件列表
+	struct socket slot[MAX_SOCKET];      //65536 每个socket_server 可以包含多个socket,slot  socket 列表
+	char buffer[MAX_INFO];               //128    地址信息转成字符串以后，存在这里
 	uint8_t udpbuffer[MAX_UDP_PACKAGE];  //65536
 	fd_set rfds;                         // select监测的fd集
 };
@@ -379,6 +380,7 @@ socket_server_create(uint64_t time) {
 		fprintf(stderr, "socket-server: create event pool failed.\n");
 		return NULL;
 	}
+    // 创建管道，用于其他线程向socket线程发送消息，这样能够轻松保证其他线程向socket线程发送数据包时的线程安全
 	if (pipe(fd)) {
 		sp_release(efd);
 		fprintf(stderr, "socket-server: create socket pair failed.\n");
@@ -398,7 +400,7 @@ socket_server_create(uint64_t time) {
 	ss->event_fd = efd;
 	ss->recvctrl_fd = fd[0];
 	ss->sendctrl_fd = fd[1];
-	ss->checkctrl = 1;
+	ss->checkctrl = 1;          //    checkctrl等于1的时候，表示本节点内其他线程有发送数据包到socket线程
 
 	for (i=0;i<MAX_SOCKET;i++) {
 		struct socket *s = &ss->slot[i];
@@ -532,7 +534,7 @@ check_wb_list(struct wb_list *s) {
 
 static struct socket *
 new_fd(struct socket_server *ss, int id, int fd, int protocol, uintptr_t opaque, bool add) {
-	struct socket * s = &ss->slot[HASH_ID(id)];
+	struct socket * s = &ss->slot[HASH_ID(id)];   //  MAX_SOCKET 65536
 	assert(s->type == SOCKET_TYPE_RESERVE);
 
 	if (add) {
@@ -545,7 +547,7 @@ new_fd(struct socket_server *ss, int id, int fd, int protocol, uintptr_t opaque,
 	s->id = id;
 	s->fd = fd;
 	s->reading = add ? READING_RESUME : READING_PAUSE;
-	s->sending = ID_TAG16(id) << 16 | 0;
+	s->sending = ID_TAG16(id) << 16 | 0;    //  MAX_SOCKET_P  16 
 	s->protocol = protocol;
 	s->p.size = MIN_READ_BUFFER;
 	s->opaque = opaque;
@@ -1507,7 +1509,7 @@ int
 socket_server_poll(struct socket_server *ss, struct socket_message * result, int * more) {
 	for (;;) {
 		if (ss->checkctrl) {     //第一次调用时是1
-			if (has_cmd(ss)) {   //是否有可读文件
+			if (has_cmd(ss)) {   //是否有可读消息
 				int type = ctrl_cmd(ss, result);
 				if (type != -1) {
 					clear_closed_event(ss, result, type);

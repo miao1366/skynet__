@@ -227,9 +227,33 @@ struct skynet_module {
 
 13 struct skynet_context    skynet_server.c   skynet_server.h
 
+struct request_resumepause {
+	int id;
+	uintptr_t opaque;
+};
+
+struct socket_message {
+	int id;
+	uintptr_t opaque;
+	int ud;	// for accept, ud is new connection id ; for data, ud is size of data 
+	char * data;
+};
 
 
+#define SOCKET_TYPE_INVALID 0
+#define SOCKET_TYPE_RESERVE 1
+#define SOCKET_TYPE_PLISTEN 2
+#define SOCKET_TYPE_LISTEN 3
+#define SOCKET_TYPE_CONNECTING 4
+#define SOCKET_TYPE_CONNECTED 5
+#define SOCKET_TYPE_HALFCLOSE 6
+#define SOCKET_TYPE_PACCEPT 7
+#define SOCKET_TYPE_BIND 8
 
+
+#define READING_PAUSE 0
+#define READING_RESUME 1
+#define READING_CLOSE 2
 
 
 

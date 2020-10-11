@@ -59,6 +59,36 @@
    我们创建一个新的服务，首先要先找到对应服务的module，在创建完module实例并完成初始化以后，还需要创建一个skynet_context上下文，
    并将module实例和module模块和这个context关联起来，最后放置于skynet_context list中，一个个独立的沙盒环境就这样被创建出来了
 
+15  我们创建一个新的skynet_context时，会往slot列表中放，当一个消息送达一个context时，其callback函数就会被调用，
+    callback函数一般在module的init函数里指定，调用callback函数时，会传入userdata（一般是instance指针），source（发送方的服务id），
+    type（消息类型），msg和sz（数据及其大小），每个服务的callback处理各自的逻辑。这里其实可以将modules视为工厂，而skynet_context则是
+    该工厂创建出来的实例，而这些实例，则是通过handle_storage来进行管理
+
+16 消息与消息队列
+   我们的创建的服务，需要通过消息来驱动，而一个服务要获取消息，是从消息队列里取的。skynet包含两级消息队列，一个global_mq，
+   他包含一个head和tail指针，分别指向次级消息队列的头部和尾部，另外还有一个次级消息队列，这个一个单向链表。消息的派发机制是，工作线程，
+   会从global_mq里pop一个次级消息队列来，然后从次级消息队列中，pop出一个消息，并传给context的callback函数，在完成驱动以后，
+   再将次级消息队列push回global_mq中.
+
+17 每条worker线程会被指定一个权重值，这个权重值决定一条线程一次消费多少条次级消息队列里的消息，当权重值< 0，worker线程一次消费一条消息
+  （从次级消息队列中pop一个消息）；当权重==0的时候，worker线程一次消费完次级消息队列里所有的消息；当权重>0时，假设次级消息队列的长度为mq_length，
+   将mq_length转成二进制数值以后，向右移动weight（权重值）位，结果N则是，该线程一次消费次级消息队列的消息数。在多条线程，同时运作时，每条worker线程
+   都要从global_mq中pop一条次级消息队列出来，对global_mq进行pop和push操作的时候，会用自旋锁锁住临界区 
+
+18 整个worker线程的消费流程是：
+      a)  worker线程每次，从global_mq中弹出一个次级消息队列，如果次级消息队列为空，则该worker线程投入睡眠，timer线程每隔2.5毫秒
+          会唤醒一条睡眠中的worker线程，并重新尝试从全局消息队列中pop一个次级消息队列出来，当次级消息队列不为空时，进入下一步
+      b)  根据次级消息的handle，找出其所属的服务（一个skynet_context实例）指针，从次级消息队列中，pop出n条消息（受weight值影响），
+          并且将其作为参数，传给skynet_context的cb函数，并调用它
+      c)  当完成callback函数调用时，就从global_mq中再pop一个次级消息队列中，供下一次使用，
+          并将本次使用的次级消息队列push回global_mq的尾部
+      d) 返回第a步
+
+19  socket_server这个结构，首先skynet的其他线程，向socket线程发送消息，是通过管道来进行的，也就是说，如果worker线程往sendctrl_fd写入数据，
+    那么在socket线程，只需要对recvctrl_fd进行读取，就能收到worker线程发送过来的数据包，这么做的好处，则是使这一流程变得非常简单，而且保证线程安全。
+    checkctrl则用来标记是否有其他线程向socket线程发送管道消息，如果有则被置为1。
+    每次有epoll事件触发时，都会往epoll事件列表ev中写入，并返回事件的数量，每处理完一个事件，event_index就会增加一（每次epoll事件触发时，
+    event_index都会被重置为0）
 
 
 

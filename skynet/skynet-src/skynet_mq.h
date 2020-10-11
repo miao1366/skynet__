@@ -16,7 +16,7 @@ struct skynet_message {
 
 // type is encoding in skynet_message.sz high 8bit
 #define MESSAGE_TYPE_MASK (SIZE_MAX >> 8)
-#define MESSAGE_TYPE_SHIFT ((sizeof(size_t)-1) * 8)
+#define MESSAGE_TYPE_SHIFT ((sizeof(size_t)-1) * 8)    //56
 
 struct message_queue;
 
