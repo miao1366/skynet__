@@ -41,7 +41,7 @@
 #endif
 
 struct skynet_context {
-	void * instance;             // 由指定module的create函数，创建的数据实例指针，同一类服务可能有多个实例，
+	void * instance;             // 由指定module的create函数，创建的数据实例指针，同一类服务可能有多个实例， 也可以表示snlua对象
 	struct skynet_module * mod;  // 引用服务模块的指针，方便后面对create、init、signal和release函数进行调用
 	void * cb_ud;                // 调用callback函数时，回传给callback的userdata，一般是instance指针
 	skynet_cb cb;                // 服务的消息回调函数，一般在skynet_module的init函数里指定

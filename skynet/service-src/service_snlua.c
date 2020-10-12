@@ -12,7 +12,7 @@
 #define MEMORY_WARNING_REPORT (1024 * 1024 * 32)
 
 struct snlua {
-	lua_State * L;    //Lua 状态机
+	lua_State * L;    //Lua 虚拟机
 	struct skynet_context * ctx;    // 关联的skynet服务
 	size_t mem;          // Lua使用的内存, 在lalloc记录
 	size_t mem_report;   // 内存预警，当达到阀值会打一条日志，然后阀值翻倍 
@@ -183,7 +183,7 @@ snlua_create(void) {
 	memset(l,0,sizeof(*l));
 	l->mem_report = MEMORY_WARNING_REPORT;
 	l->mem_limit = 0;
-	l->L = lua_newstate(lalloc, l);
+	l->L = lua_newstate(lalloc, l);  // 创建一个lua虚拟机   lua_newstate可自定义内存分配函数  
 	return l;
 }
 

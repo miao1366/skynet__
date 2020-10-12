@@ -90,6 +90,8 @@
     每次有epoll事件触发时，都会往epoll事件列表ev中写入，并返回事件的数量，每处理完一个事件，event_index就会增加一（每次epoll事件触发时，
     event_index都会被重置为0）
 
+20 snlua 用来创建lua服务，一个lua服务对应一个lua虚拟机
+
 
 
 

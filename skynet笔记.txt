@@ -257,7 +257,42 @@ struct socket_message {
 
 
 
+1.  skynet_context_new (name=0x7ffff6a4bbf0 "logger", param=0x0)
+0.  skynet_context_new (name=0x7fffffffd710 "snlua", param=0x7fffffffd700 "bootstrap")
 
+
+skynet-src/skynet_main.c : line 127
+skynet-src/skynet_main.c : line 129
+skynet-src/skynet_main.c : line 131
+skynet-src/skynet_main.c : line 143
+skynet-src/skynet_main.c : line 147
+skynet-src/skynet_main.c : line 166
+[:00000000] LAUNCH snlua bootstrap skynet-src/skynet_server.c 127
+[:00000000] LAUNCH snlua launcher skynet-src/skynet_server.c 127
+[:00000000] LAUNCH snlua cmaster skynet-src/skynet_server.c 127
+[:01000004] master listen socket 0.0.0.0:2013cmaster.lua  line: 112
+[:00000000] LAUNCH snlua cslave skynet-src/skynet_server.c 127
+[:01000005] slave connect to master 127.0.0.1:2013 cslave.lua  line: 233
+[:01000004] connect from 127.0.0.1:33666 4cmaster.lua  line: 115
+[:00000000] LAUNCH harbor 1 16777221 skynet-src/skynet_server.c 127
+[:01000004] Harbor 1 (fd=4) report 127.0.0.1:2526 cmaster.lua 99
+[:01000005] Waiting for 0 harbors, cslave.lua line:248
+[:01000005] Shakehand readycslave.lua  271
+[:00000000] LAUNCH snlua datacenterd skynet-src/skynet_server.c 127
+[:00000000] LAUNCH snlua service_mgr skynet-src/skynet_server.c 127
+[:00000000] LAUNCH snlua main skynet-src/skynet_server.c 127
+[:01000009] Server startmain.lua 7
+[:00000000] LAUNCH snlua protoloader skynet-src/skynet_server.c 127
+[:00000000] LAUNCH snlua console skynet-src/skynet_server.c 127
+[:00000000] LAUNCH snlua debug_console 8000 skynet-src/skynet_server.c 127
+[:0100000c] Start debug console at 127.0.0.1:8000debug_console.lua    line:122
+[:00000000] LAUNCH snlua simpledb skynet-src/skynet_server.c 127
+[:00000000] LAUNCH snlua watchdog skynet-src/skynet_server.c 127
+[:00000000] LAUNCH snlua gate skynet-src/skynet_server.c 127
+[:0100000f] Listen on 0.0.0.0:8888 gateserver.lua 40
+[:01000009] main.lua line: 20 Watchdog listen on 8888
+[:01000009] KILL self skynet-src/skynet_server.c 381
+[:01000002] KILL self skynet-src/skynet_server.c 381
 
 
 
