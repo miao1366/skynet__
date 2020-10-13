@@ -92,7 +92,17 @@
 
 20 snlua 用来创建lua服务，一个lua服务对应一个lua虚拟机
 
+21 Lua服务的入口脚本必须包含2点：1. require "skynet"，这样才能使用skynet.lua里的接口；2. 
+   调用skyne.start函数
 
+22 skynet.lua提供了很多api供Lua服务调用，第1行代码是local c = require "skynet.core"，
+   skynet.core是由C编写的so库，so库里提供很多api供Lua层调用(lualib-src/lua-skynet.c)。
+   require "skynet"过程中还做了其他事情放在下一篇介绍。
+
+23  Lua服务入口的第二件事是调用skynet.start，重新设置消息回调函数（第3行，之前设置的
+    launch_cb回调函数已经失效了）
+
+24 
 
 
 

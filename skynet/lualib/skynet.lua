@@ -762,6 +762,7 @@ function skynet.init_service(start)
 end
 
 function skynet.start(start_func)
+    --重新设置消息回调函数
 	c.callback(skynet.dispatch_message)
 	init_thread = skynet.timeout(0, function()
 		skynet.init_service(start_func)

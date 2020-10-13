@@ -81,7 +81,7 @@ init_cb(struct snlua *l, struct skynet_context *ctx, const char * args, size_t s
 	lua_setfield(L, LUA_REGISTRYINDEX, "LUA_NOENV");
 	luaL_openlibs(L);
 	lua_pushlightuserdata(L, ctx);
-	lua_setfield(L, LUA_REGISTRYINDEX, "skynet_context");
+	lua_setfield(L, LUA_REGISTRYINDEX, "skynet_context");   //    将ctx设置到LUA_REGISTRYINDEX里，以便在C与Lua的交互中可以获取到ctx
 	luaL_requiref(L, "skynet.codecache", codecache , 0);
 	lua_pop(L,1);
 
@@ -96,21 +96,21 @@ init_cb(struct snlua *l, struct skynet_context *ctx, const char * args, size_t s
 	lua_setglobal(L, "LUA_SERVICE");
 	const char *preload = skynet_command(ctx, "GETENV", "preload");
 	lua_pushstring(L, preload);
-	lua_setglobal(L, "LUA_PRELOAD");
+	lua_setglobal(L, "LUA_PRELOAD");       //    设置全局变量LUA_PRELOAD
 
 	lua_pushcfunction(L, traceback);
 	assert(lua_gettop(L) == 1);
 
 	const char * loader = optstring(ctx, "lualoader", "./lualib/loader.lua");
 
-	int r = luaL_loadfile(L,loader);
+	int r = luaL_loadfile(L,loader);      // 加载loader.lua脚本
 	if (r != LUA_OK) {
 		skynet_error(ctx, "Can't load %s : %s", loader, lua_tostring(L, -1));
 		report_launcher_error(ctx);
 		return 1;
 	}
 	lua_pushlstring(L, args, sz);
-	r = lua_pcall(L,1,0,1);
+	r = lua_pcall(L,1,0,1);              // 运行loader.lua，参数是“bootstrap”
 	if (r != LUA_OK) {
 		skynet_error(ctx, "lua loader error : %s", lua_tostring(L, -1));
 		report_launcher_error(ctx);
@@ -183,7 +183,7 @@ snlua_create(void) {
 	memset(l,0,sizeof(*l));
 	l->mem_report = MEMORY_WARNING_REPORT;
 	l->mem_limit = 0;
-	l->L = lua_newstate(lalloc, l);  // 创建一个lua虚拟机   lua_newstate可自定义内存分配函数  
+	l->L = lua_newstate(lalloc, l);  // 创建一个lua虚拟机   lua_newstate()可自定义内存分配函数  
 	return l;
 }
 

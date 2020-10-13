@@ -52,6 +52,8 @@ traceback (lua_State *L) {
 	return 1;
 }
 
+//    在_cb里，最终会调用Lua层的dispatch_message，参数依次是：type, msg, sz, session, source。所以，snlua类型的服务收到消息时
+//    最终会调用Lua层的消息回调函数skynet.dispatch_message
 static int
 _cb(struct skynet_context * context, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz) {
 	lua_State *L = ud;
@@ -105,6 +107,7 @@ forward_cb(struct skynet_context * context, void * ud, int type, int session, ui
 	return 1;
 }
 
+//  通过lua_upvalueindex获取函数的上值ctx，然后设置服务的消息回调函数为_cb，此时Lua堆栈上有且仅有一个元素lua函数(skynet.dispatch_message)
 static int
 lcallback(lua_State *L) {
 	struct skynet_context * context = lua_touserdata(L, lua_upvalueindex(1));
@@ -482,7 +485,7 @@ ltrace(lua_State *L) {
 LUAMOD_API int
 luaopen_skynet_core(lua_State *L) {
 	luaL_checkversion(L);
-
+    // 提供注册函数供Lua层调用
 	luaL_Reg l[] = {
 		{ "send" , lsend },
 		{ "genid", lgenid },
@@ -510,7 +513,7 @@ luaopen_skynet_core(lua_State *L) {
 	};
 
 	lua_createtable(L, 0, sizeof(l)/sizeof(l[0]) + sizeof(l2)/sizeof(l2[0]) -2);
-
+    // 513--523  从LUA_REGISTERINDEX表中获取ctx(在init_cb里设置的)，这些注册函数共用ctx这个上值，在C api里通过lua_upvalueindex(1)获取这个ctx，然后对ctx进行相应处理
 	lua_getfield(L, LUA_REGISTRYINDEX, "skynet_context");
 	struct skynet_context *ctx = lua_touserdata(L,-1);
 	if (ctx == NULL) {
