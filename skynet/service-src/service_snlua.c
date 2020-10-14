@@ -83,14 +83,15 @@ init_cb(struct snlua *l, struct skynet_context *ctx, const char * args, size_t s
 	lua_pushlightuserdata(L, ctx);
 	lua_setfield(L, LUA_REGISTRYINDEX, "skynet_context");   //    将ctx设置到LUA_REGISTRYINDEX里，以便在C与Lua的交互中可以获取到ctx
 	luaL_requiref(L, "skynet.codecache", codecache , 0);
-	lua_pop(L,1);
+	lua_pop(L,1);    //?
 
 	const char *path = optstring(ctx, "lua_path","./lualib/?.lua;./lualib/?/init.lua");
-	lua_pushstring(L, path);
-	lua_setglobal(L, "LUA_PATH");
+	lua_pushstring(L, path);           //把指针 s 指向的以零结尾的字符串压栈。Lua 对这个字符串做一次内存拷贝（或是复用一个拷贝）
+                                       //，因此 s 处的内存在函数返回后，可以释放掉或是重用于其它用途。字符串中不能包含有零字符，第一个碰到的零字符会认为是字符串的结束
+	lua_setglobal(L, "LUA_PATH");      //将栈顶元素赋值给name变量。(name参数的值，是lua脚本中全部变量的名字。)
 	const char *cpath = optstring(ctx, "lua_cpath","./luaclib/?.so");
-	lua_pushstring(L, cpath);
-	lua_setglobal(L, "LUA_CPATH");
+	lua_pushstring(L, cpath);          
+	lua_setglobal(L, "LUA_CPATH"); 
 	const char *service = optstring(ctx, "luaservice", "./service/?.lua");
 	lua_pushstring(L, service);
 	lua_setglobal(L, "LUA_SERVICE");
@@ -99,7 +100,7 @@ init_cb(struct snlua *l, struct skynet_context *ctx, const char * args, size_t s
 	lua_setglobal(L, "LUA_PRELOAD");       //    设置全局变量LUA_PRELOAD
 
 	lua_pushcfunction(L, traceback);
-	assert(lua_gettop(L) == 1);
+	assert(lua_gettop(L) == 1);           //返回栈中元素个数
 
 	const char * loader = optstring(ctx, "lualoader", "./lualib/loader.lua");
 
